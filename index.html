@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ดสรุปผลการประเมินรายวิชา (วันที่สอง) - หลักสูตรสร้างผู้นำการเปลี่ยนแปลงฯ ปี 2570</title>
+    <!-- Google Fonts: Prompt และ Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js และ PapaParse สำหรับประมวลผล CSV แบบเรียลไทม์ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                        display: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        emeraldDeep: '#0f3d30',
+                        emeraldRich: '#1b4d3e',
+                        emeraldSoft: '#2a6f5b',
+                        goldAccent: '#d4a338',
+                        goldLight: '#f3d999',
+                        creamWarm: '#f8faf9',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f8faf9;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(27, 77, 62, 0.06) 0px, transparent 48%),
+                radial-gradient(at 100% 0%, rgba(212, 163, 56, 0.08) 0px, transparent 48%);
+            background-attachment: fixed;
+            color: #1f2937;
+        }
+
+        h1, h2, h3, h4, .font-display {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        /* จุด Live Indicator กระพริบ */
+        @keyframes pulseRing {
+            0% { transform: scale(0.85); opacity: 0.9; }
+            70% { transform: scale(2.1); opacity: 0; }
+            100% { transform: scale(2.1); opacity: 0; }
+        }
+        .live-pulse::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            background-color: #10b981;
+            animation: pulseRing 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* สไตล์สำหรับการสั่งพิมพ์รายงาน */
+        @media print {
+            body {
+                background: #ffffff !important;
+                background-image: none !important;
+                color: #000000 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-header {
+                background: #ffffff !important;
+                color: #000000 !important;
+                border: 1.5px solid #1b4d3e !important;
+                box-shadow: none !important;
+            }
+            .print-header h1, .print-header h2, .print-header p, .print-header span {
+                color: #000000 !important;
+            }
+            .card-box {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+                break-inside: avoid;
+            }
+            table {
+                font-size: 11px !important;
+            }
+            th {
+                background-color: #e5e7eb !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased pb-16">
+
+    <!-- แถบควบคุมด้านบนสุด (Top Control & Live Status Bar) -->
+    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-900/10 shadow-2xs no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <!-- สถานะ Live และการอัปเดต -->
+            <div class="flex items-center gap-3">
+                <div class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                    <span class="relative flex h-2.5 w-2.5 live-pulse">
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="font-display text-xs font-semibold text-emeraldDeep tracking-wide">LIVE REAL-TIME</span>
+                </div>
+                <span id="lastUpdatedText" class="text-xs sm:text-sm text-gray-600">
+                    กำลังเชื่อมต่อข้อมูล...
+                </span>
+            </div>
+
+            <!-- ปุ่มเครื่องมือ: Auto-Refresh, รีเฟรชทันที, ลิงก์ฟอร์ม, พิมพ์ -->
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                <!-- สวิตช์ Auto-refresh 30 วินาที -->
+                <label class="inline-flex items-center gap-2 cursor-pointer bg-stone-100 hover:bg-stone-200/80 px-3 py-1.5 rounded-xl border border-gray-200 text-xs sm:text-sm text-gray-700 select-none transition-colors">
+                    <input type="checkbox" id="autoRefreshToggle" checked class="sr-only peer">
+                    <div class="w-8 h-4.5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emeraldRich relative"></div>
+                    <span class="font-medium">อัปเดตอัตโนมัติ (30วิ)</span>
+                </label>
+
+                <!-- ปุ่มรีเฟรชทันที -->
+                <button type="button" id="refreshBtn" onclick="fetchSheetData(true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emeraldRich hover:bg-emeraldSoft text-white font-display text-xs sm:text-sm font-medium shadow-2xs transition-all cursor-pointer">
+                    <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>รีเฟรชข้อมูลทันที</span>
+                </button>
+
+                <!-- ปุ่มไปยังแบบประเมิน -->
+                <a href="https://pmcdlclampangj.github.io/Roon1D2/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-goldAccent/60 font-display text-xs sm:text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    <span>เปิดฟอร์มแบบประเมิน</span>
+                </a>
+
+                <!-- ปุ่มพิมพ์รายงาน -->
+                <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-display text-xs sm:text-sm font-medium transition-all cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    <span class="hidden sm:inline">พิมพ์รายงาน</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+
+        <!-- ==================== 1. HEADER BANNER ==================== -->
+        <header class="print-header relative overflow-hidden rounded-2xl bg-gradient-to-br from-emeraldDeep via-emeraldRich to-emeraldSoft text-white p-6 sm:p-8 shadow-xl border-t-4 border-goldAccent mb-6">
+            <div class="absolute -right-14 -top-14 w-56 h-56 rounded-full bg-goldAccent/15 blur-2xl pointer-events-none no-print"></div>
+            <div class="absolute -left-12 -bottom-16 w-52 h-52 rounded-full bg-white/5 blur-2xl pointer-events-none no-print"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <div class="space-y-2">
+                    <div class="inline-flex items-center gap-2 bg-white/10 border border-goldLight/30 px-3.5 py-1 rounded-full text-xs sm:text-sm text-amber-200 font-display font-medium">
+                        <span class="w-2 h-2 rounded-full bg-goldAccent"></span>
+                        <span>หลักสูตรสร้างผู้นำการเปลี่ยนแปลงขับเคลื่อนตำบลเข้มแข็ง ตามหลักปรัชญาของเศรษฐกิจพอเพียง ปี 2570</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                        สรุปผลการประเมินรายวิชา (วันที่สอง) แบบเรียลไทม์
+                    </h1>
+                    <p class="text-sm sm:text-base text-emerald-100/90 max-w-3xl">
+                        ระบบวิเคราะห์ข้อมูลความพึงพอใจของผู้เข้าอบรม แยกตามข้อมูลทั่วไป รายวิชา 3 วิชาหลัก และข้อเสนอแนะเชิงพื้นที่
+                    </p>
+                </div>
+
+                <!-- กล่องลิงก์อ้างอิงแบบประเมิน -->
+                <div class="bg-black/20 backdrop-blur-xs border border-white/15 rounded-xl p-4 shrink-0 no-print">
+                    <div class="text-xs text-amber-300 font-display font-medium mb-1">แบบประเมินออนไลน์ที่เชื่อมโยง</div>
+                    <a href="https://pmcdlclampangj.github.io/Roon1D2/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm font-medium text-white hover:text-amber-200 underline decoration-goldAccent underline-offset-4">
+                        <span>pmcdlclampangj.github.io/Roon1D2/</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- ==================== 2. INTERACTIVE FILTER BAR ==================== -->
+        <section class="card-box bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-stone-200/90 mb-6 no-print">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3.5 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 text-emeraldRich">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                    </span>
+                    <h2 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep">ตัวกรองวิเคราะห์ข้อมูลตามกลุ่มเป้าหมาย</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="filterSummaryBadge" class="text-xs font-medium text-emeraldRich bg-emerald-50 px-2.5 py-1 rounded-full">
+                        กำลังแสดงข้อมูลทั้งหมด
+                    </span>
+                    <button type="button" onclick="resetFilters()" class="text-xs sm:text-sm font-display font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer">
+                        ล้างตัวกรอง
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <label for="filterGender" class="block text-xs font-semibold text-gray-600 mb-1">เพศ</label>
+                    <select id="filterGender" onchange="applyFilters()" class="w-full rounded-xl border border-gray-300 bg-stone-50/70 px-3 py-2 text-sm text-gray-800 focus:bg-white focus:border-emeraldRich focus:ring-2 focus:ring-emeraldRich/15 outline-none">
+                        <option value="ALL">ทั้งหมด</option>
+                        <option value="ชาย">ชาย</option>
+                        <option value="หญิง">หญิง</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="filterAge" class="block text-xs font-semibold text-gray-600 mb-1">ช่วงอายุ</label>
+                    <select id="filterAge" onchange="applyFilters()" class="w-full rounded-xl border border-gray-300 bg-stone-50/70 px-3 py-2 text-sm text-gray-800 focus:bg-white focus:border-emeraldRich focus:ring-2 focus:ring-emeraldRich/15 outline-none">
+                        <option value="ALL">ทั้งหมด</option>
+                        <option value="น้อยกว่า 30 ปี">น้อยกว่า 30 ปี</option>
+                        <option value="30-40 ปี">30-40 ปี</option>
+                        <option value="41-50 ปี">41-50 ปี</option>
+                        <option value="50 ปีขึ้นไป">50 ปีขึ้นไป</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="filterEducation" class="block text-xs font-semibold text-gray-600 mb-1">วุฒิการศึกษา</label>
+                    <select id="filterEducation" onchange="applyFilters()" class="w-full rounded-xl border border-gray-300 bg-stone-50/70 px-3 py-2 text-sm text-gray-800 focus:bg-white focus:border-emeraldRich focus:ring-2 focus:ring-emeraldRich/15 outline-none">
+                        <option value="ALL">ทั้งหมด</option>
+                        <option value="ต่ำกว่า ม.3">ต่ำกว่า ม.3</option>
+                        <option value="ม.3 หรือเทียบเท่า">ม.3 หรือเทียบเท่า</option>
+                        <option value="ม.6 หรือเทียบเท่า">ม.6 หรือเทียบเท่า</option>
+                        <option value="ปริญญาตรี">ปริญญาตรี</option>
+                        <option value="ปริญญาโท">ปริญญาโท</option>
+                        <option value="อื่น ๆ">อื่น ๆ</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="filterStatus" class="block text-xs font-semibold text-gray-600 mb-1">สถานะทางสังคม</label>
+                    <select id="filterStatus" onchange="applyFilters()" class="w-full rounded-xl border border-gray-300 bg-stone-50/70 px-3 py-2 text-sm text-gray-800 focus:bg-white focus:border-emeraldRich focus:ring-2 focus:ring-emeraldRich/15 outline-none">
+                        <option value="ALL">ทั้งหมด</option>
+                        <option value="กำนัน ผู้ใหญ่บ้าน">กำนัน ผู้ใหญ่บ้าน</option>
+                        <option value="ผู้นำชุมชน/ท้องถิ่น (อปท.)">ผู้นำชุมชน/ท้องถิ่น (อปท.)</option>
+                        <option value="ผู้แทน ศอช.ต.">ผู้แทน ศอช.ต.</option>
+                        <option value="เจ้าหน้าที่ของกรมการพัฒนาชุมชน">เจ้าหน้าที่ของกรมการพัฒนาชุมชน</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- สถานะกำลังโหลด / ข้อผิดพลาด / ยังไม่มีข้อมูล -->
+        <div id="stateMessageBox" class="hidden card-box bg-white rounded-2xl p-10 text-center shadow-sm border border-stone-200 mb-6">
+            <div id="stateIcon" class="mx-auto w-14 h-14 rounded-2xl bg-emerald-50 text-emeraldRich flex items-center justify-center mb-3">
+                <svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+            </div>
+            <h3 id="stateTitle" class="font-display text-lg font-bold text-emeraldDeep mb-1">กำลังโหลดข้อมูลจาก Google Sheets...</h3>
+            <p id="stateDesc" class="text-sm text-gray-500 max-w-md mx-auto">โปรดรอสักครู่ ระบบกำลังดึงผลประเมินล่าสุด</p>
+        </div>
+
+        <!-- เนื้อหาหลักของแดชบอร์ด -->
+        <div id="dashboardContent" class="space-y-6">
+
+            <!-- ==================== 3. KPI CARDS (5 ใบ) ==================== -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- KPI 1: จำนวนผู้ตอบ -->
+                <div class="card-box bg-white rounded-2xl p-5 shadow-sm border border-stone-200/90 border-l-4 border-l-emeraldRich flex flex-col justify-between">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="text-xs font-display font-semibold text-gray-500 uppercase tracking-wide">ผู้ตอบแบบประเมิน</span>
+                        <span class="p-2 rounded-xl bg-emerald-50 text-emeraldRich">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="my-2">
+                        <span id="kpiTotalRespondents" class="font-display text-3xl font-bold text-emeraldDeep">0</span>
+                        <span class="text-sm text-gray-500 ml-1">คน</span>
+                    </div>
+                    <div id="kpiRespondentSub" class="text-xs text-gray-500">จากทั้งหมด 0 รายการในชีต</div>
+                </div>
+
+                <!-- KPI 2: คะแนนเฉลี่ยรวมทั้ง 3 วิชา -->
+                <div class="card-box bg-gradient-to-br from-emeraldDeep to-emeraldRich text-white rounded-2xl p-5 shadow-md border border-goldAccent/60 flex flex-col justify-between">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="text-xs font-display font-semibold text-amber-200 uppercase tracking-wide">เฉลี่ยรวมทั้ง 3 วิชา</span>
+                        <span class="p-2 rounded-xl bg-white/10 text-amber-300">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="my-2 flex items-baseline gap-1.5">
+                        <span id="kpiOverallAvg" class="font-display text-3xl font-bold text-amber-300">0.00</span>
+                        <span class="text-xs text-white/75">/ 5.00</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-1 text-xs">
+                        <span id="kpiOverallPct" class="text-emerald-100">ร้อยละ 0.00%</span>
+                        <span id="kpiOverallLevel" class="px-2 py-0.5 rounded-full bg-goldAccent text-emeraldDeep font-display font-bold">-</span>
+                    </div>
+                </div>
+
+                <!-- KPI 3: วิชาที่ 1 -->
+                <div class="card-box bg-white rounded-2xl p-5 shadow-sm border border-stone-200/90 border-t-4 border-t-emeraldSoft flex flex-col justify-between">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="text-xs font-display font-semibold text-gray-600 leading-snug">วิชาที่ 1: เสวนาทีมผู้นำฯ</span>
+                        <span class="shrink-0 w-6 h-6 rounded-lg bg-emerald-50 text-emeraldRich font-display font-bold text-xs flex items-center justify-center">1</span>
+                    </div>
+                    <div class="my-2 flex items-baseline gap-1.5">
+                        <span id="kpiS1Avg" class="font-display text-3xl font-bold text-emeraldRich">0.00</span>
+                        <span class="text-xs text-gray-400">/ 5.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span id="kpiS1Pct" class="text-gray-500">ร้อยละ 0.00%</span>
+                        <span id="kpiS1Level" class="font-semibold text-emeraldRich">-</span>
+                    </div>
+                </div>
+
+                <!-- KPI 4: วิชาที่ 2 -->
+                <div class="card-box bg-white rounded-2xl p-5 shadow-sm border border-stone-200/90 border-t-4 border-t-goldAccent flex flex-col justify-between">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="text-xs font-display font-semibold text-gray-600 leading-snug">วิชาที่ 2: หลักการพัฒนาชุมชนฯ</span>
+                        <span class="shrink-0 w-6 h-6 rounded-lg bg-amber-50 text-amber-800 font-display font-bold text-xs flex items-center justify-center">2</span>
+                    </div>
+                    <div class="my-2 flex items-baseline gap-1.5">
+                        <span id="kpiS2Avg" class="font-display text-3xl font-bold text-emeraldRich">0.00</span>
+                        <span class="text-xs text-gray-400">/ 5.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span id="kpiS2Pct" class="text-gray-500">ร้อยละ 0.00%</span>
+                        <span id="kpiS2Level" class="font-semibold text-emeraldRich">-</span>
+                    </div>
+                </div>
+
+                <!-- KPI 5: วิชาที่ 3 -->
+                <div class="card-box bg-white rounded-2xl p-5 shadow-sm border border-stone-200/90 border-t-4 border-t-teal-600 flex flex-col justify-between">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="text-xs font-display font-semibold text-gray-600 leading-snug">วิชาที่ 3: วิเคราะห์ &amp; Prototype</span>
+                        <span class="shrink-0 w-6 h-6 rounded-lg bg-teal-50 text-teal-800 font-display font-bold text-xs flex items-center justify-center">3</span>
+                    </div>
+                    <div class="my-2 flex items-baseline gap-1.5">
+                        <span id="kpiS3Avg" class="font-display text-3xl font-bold text-emeraldRich">0.00</span>
+                        <span class="text-xs text-gray-400">/ 5.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span id="kpiS3Pct" class="text-gray-500">ร้อยละ 0.00%</span>
+                        <span id="kpiS3Level" class="font-semibold text-emeraldRich">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 4. ส่วนที่ 1 ข้อมูลทั่วไปของผู้ตอบ (4 กราฟ) ==================== -->
+            <section class="card-box bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-stone-200/90">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-6 border-b-2 border-goldAccent/60">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emeraldRich text-white font-display font-bold text-sm shadow-2xs">1</span>
+                        <h2 class="text-lg sm:text-xl font-bold text-emeraldDeep">ส่วนที่ 1 ข้อมูลทั่วไปของผู้ตอบแบบประเมิน</h2>
+                    </div>
+                    <span class="text-xs text-gray-500">จำแนกตามเพศ ช่วงอายุ วุฒิการศึกษา และสถานะทางสังคม</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- กราฟ 1: เพศ (โดนัท) -->
+                    <div class="bg-stone-50/70 rounded-2xl p-4 sm:p-5 border border-gray-200/80">
+                        <h3 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep mb-3 flex items-center justify-between">
+                            <span>1. สัดส่วนผู้ตอบจำแนกตามเพศ</span>
+                            <span id="genderCountNote" class="text-xs font-normal text-gray-500"></span>
+                        </h3>
+                        <div class="relative h-60 flex items-center justify-center">
+                            <canvas id="chartGender"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- กราฟ 2: ช่วงอายุ (แท่งแนวตั้ง) -->
+                    <div class="bg-stone-50/70 rounded-2xl p-4 sm:p-5 border border-gray-200/80">
+                        <h3 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep mb-3">
+                            2. จำนวนผู้ตอบจำแนกตามช่วงอายุ
+                        </h3>
+                        <div class="relative h-60">
+                            <canvas id="chartAge"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- กราฟ 3: วุฒิการศึกษา (แท่งแนวนอน) -->
+                    <div class="bg-stone-50/70 rounded-2xl p-4 sm:p-5 border border-gray-200/80">
+                        <h3 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep mb-3">
+                            3. จำนวนผู้ตอบจำแนกตามวุฒิการศึกษา
+                        </h3>
+                        <div class="relative h-64">
+                            <canvas id="chartEducation"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- กราฟ 4: สถานะทางสังคม (แท่งแนวนอน) -->
+                    <div class="bg-stone-50/70 rounded-2xl p-4 sm:p-5 border border-gray-200/80">
+                        <h3 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep mb-3">
+                            4. จำนวนผู้ตอบจำแนกตามสถานะทางสังคม
+                        </h3>
+                        <div class="relative h-64">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 5. ส่วนที่ 2 การประเมินรายวิชา ==================== -->
+            <section class="card-box bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-stone-200/90">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-6 border-b-2 border-goldAccent/60">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emeraldRich text-white font-display font-bold text-sm shadow-2xs">2</span>
+                        <h2 class="text-lg sm:text-xl font-bold text-emeraldDeep">ส่วนที่ 2 การวิเคราะห์ผลการประเมินรายวิชา</h2>
+                    </div>
+                    <div class="text-xs text-gray-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                        เกณฑ์แปลผล: 4.51–5.00 มากที่สุด | 3.51–4.50 มาก | 2.51–3.50 ปานกลาง | 1.51–2.50 น้อย | 1.00–1.50 น้อยที่สุด
+                    </div>
+                </div>
+
+                <!-- กราฟเปรียบเทียบคะแนนเฉลี่ยทั้ง 3 วิชา -->
+                <div class="bg-stone-50/70 rounded-2xl p-4 sm:p-5 border border-gray-200/80 mb-7">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <h3 class="font-display text-sm sm:text-base font-semibold text-emeraldDeep">
+                            กราฟเปรียบเทียบคะแนนเฉลี่ยทั้ง 3 รายวิชา (เต็ม 5.00 คะแนน)
+                        </h3>
+                        <span class="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                            เส้นประสีทอง = เกณฑ์ระดับ "มากที่สุด" (4.51)
+                        </span>
+                    </div>
+                    <div class="relative h-64 sm:h-72">
+                        <canvas id="chartSubjectsCompare"></canvas>
+                    </div>
+                </div>
+
+                <!-- แท็บสลับดูรายละเอียดรายข้อ -->
+                <div class="flex flex-wrap items-center gap-2 mb-5 no-print" role="tablist">
+                    <button type="button" onclick="switchSubjectTab('ALL')" id="tab-ALL" class="subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-semibold bg-emeraldRich text-white shadow-2xs transition-all cursor-pointer">
+                        แสดงทั้งหมด (3 วิชา / 22 ข้อ)
+                    </button>
+                    <button type="button" onclick="switchSubjectTab('S1')" id="tab-S1" class="subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-medium bg-stone-100 text-gray-700 hover:bg-emerald-50 transition-all cursor-pointer">
+                        วิชาที่ 1 (7 ข้อ)
+                    </button>
+                    <button type="button" onclick="switchSubjectTab('S2')" id="tab-S2" class="subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-medium bg-stone-100 text-gray-700 hover:bg-emerald-50 transition-all cursor-pointer">
+                        วิชาที่ 2 (7 ข้อ)
+                    </button>
+                    <button type="button" onclick="switchSubjectTab('S3')" id="tab-S3" class="subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-medium bg-stone-100 text-gray-700 hover:bg-emerald-50 transition-all cursor-pointer">
+                        วิชาที่ 3 (8 ข้อ)
+                    </button>
+                </div>
+
+                <!-- คอนเทนเนอร์แสดงตารางรายข้อของแต่ละวิชา -->
+                <div id="subjectTablesContainer" class="space-y-8"></div>
+            </section>
+
+            <!-- ==================== 6. ส่วนที่ 3 ความคิดเห็นและข้อเสนอแนะเพิ่มเติม ==================== -->
+            <section class="card-box bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-stone-200/90">
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-5 border-b-2 border-goldAccent/60">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emeraldRich text-white font-display font-bold text-sm shadow-2xs">3</span>
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-bold text-emeraldDeep">ส่วนที่ 3 ความคิดเห็นและข้อเสนอแนะเพิ่มเติม</h2>
+                        </div>
+                        <span id="suggestionCountBadge" class="bg-amber-100 text-amber-900 font-display font-bold text-xs px-2.5 py-1 rounded-full">
+                            0 ข้อความ
+                        </span>
+                    </div>
+
+                    <!-- ช่องค้นหาในข้อเสนอแนะ -->
+                    <div class="relative w-full sm:w-72 no-print">
+                        <input type="text" id="suggestionSearchInput" oninput="renderSuggestions()" placeholder="ค้นหาคำในข้อเสนอแนะ..." class="w-full rounded-xl border border-gray-300 bg-stone-50/70 pl-9 pr-3 py-2 text-sm text-gray-800 focus:bg-white focus:border-emeraldRich focus:ring-2 focus:ring-emeraldRich/15 outline-none">
+                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="suggestionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // URL ของ Google Sheets ที่เผยแพร่เป็น CSV
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQM1W9boX02bNN47Gr4-BggpKHJgRFOM1Cy80944jbFX_6-bPcFiYOjalV21SvGjlckNn_XBTEvFaYl/pub?gid=0&single=true&output=csv";
+
+        // ข้อมูลข้อคำถามเต็มของทั้ง 3 รายวิชา (ตามโครงสร้างแบบประเมินวันที่สอง)
+        const SUBJECTS_CONFIG = [
+            {
+                id: "S1",
+                prefix: "วิชา1_ข้อ",
+                altPrefix: "s1_q",
+                shortTitle: "วิชาที่ 1: เสวนาทีมผู้นำการเปลี่ยนแปลงฯ",
+                fullTitle: "1 วิชา เสวนาทีมผู้นำการเปลี่ยนแปลงกับการขับเคลื่อนตำบลเข้มแข็ง",
+                questions: [
+                    "1. รูปแบบการเสวนา (2 ชั่วโมง) ช่วยให้การเรียนรู้ประสบการณ์จากทีมผู้นำการเปลี่ยนแปลงต้นแบบ ปี 2569 ได้เป็นอย่างดี",
+                    "2. ผู้เข้าอบรมได้รับทราบปัจจัยความสำเร็จ ปัญหาอุปสรรค และแนวทางขับเคลื่อนตำบลเข้มแข็ง ที่นำไปใช้ประโยชน์ได้",
+                    "3. ผู้ร่วมการเสวนาสามารถถ่ายทอดองค์ความรู้และสร้างแรงบันดาลใจได้ดี",
+                    "4. ผู้เข้าอบรมสามารถสรุปบทเรียนและนำแนวคิดจากกรณีต้นแบบไปปรับใช้กับบริบทพื้นที่ของตนเองได้",
+                    "5. ผู้เข้าอบรมได้รับความรู้ และทักษะเพิ่มเติมจากการเสวนานี้",
+                    "6. ผู้เข้าอบรมสามารถนำแนวคิดไปประยุกต์ใช้ในการทำงานจริงในพื้นที่ได้",
+                    "7. มีการเปิดโอกาสให้ซักถาม หรือแสดงความคิดเห็นระหว่างการอบรม"
+                ]
+            },
+            {
+                id: "S2",
+                prefix: "วิชา2_ข้อ",
+                altPrefix: "s2_q",
+                shortTitle: "วิชาที่ 2: หลักการ แนวคิด การพัฒนาชุมชนฯ",
+                fullTitle: "2 วิชา หลักการ แนวคิด การพัฒนาชุมชนและกระบวนการพัฒนาชุมชนในพื้นที่",
+                questions: [
+                    "1. เนื้อหาครอบคลุมหลักการพัฒนาชุมชน การมีส่วนร่วมของประชาชน และบทบาทวิทยากรกระบวนการ",
+                    "2. ระยะเวลาการบรรยาย (3 ชั่วโมง) มีความเหมาะสมต่อการทำความเข้าใจแนวคิด",
+                    "3. วิทยากรมีความเชี่ยวชาญด้านการพัฒนาชุมชน กระบวนการมีส่วนร่วม และทักษะวิทยากรกระบวนการ",
+                    "4. ผู้เข้าอบรมสามารถอธิบายหลักการพัฒนาชุมชนและนำบทบาทวิทยากรกระบวนการไปปรับใช้ทำงานได้",
+                    "5. สื่อประกอบการบรรยายมีความชัดเจนและช่วยให้เข้าใจง่ายขึ้น",
+                    "6. ผู้เข้าอบรมได้รับความรู้ และทักษะเพิ่มเติมจากวิชานี้",
+                    "7. ผู้เข้าอบรมสามารถนำแนวคิดไปประยุกต์ใช้ในการทำงานจริงในพื้นที่ได้"
+                ]
+            },
+            {
+                id: "S3",
+                prefix: "วิชา3_ข้อ",
+                altPrefix: "s3_q",
+                shortTitle: "วิชาที่ 3: การวิเคราะห์สถานการณ์ & Prototype",
+                fullTitle: "3 วิชา การวิเคราะห์สถานการณ์ และการออกแบบ Prototype ในการพัฒนาชุมชนเชิงพื้นที่",
+                questions: [
+                    "1. ระยะเวลาการบรรยาย (2 ชั่วโมง) เหมาะสมกับขอบเขตเนื้อหา",
+                    "2. การแบ่งกลุ่มฝึกปฏิบัติ (2 ชั่วโมง) มีความเหมาะสม",
+                    "3. เนื้อหาช่วยให้เข้าใจการวิเคราะห์ข้อมูล ทุนชุมชน ปัญหา และการจัดลำดับประเด็นเพื่อวางแผน",
+                    "4. วิทยากรให้คำแนะนำและกระตุ้นการเรียนรู้ในการออกแบบ Prototype ได้อย่างมีประสิทธิภาพ",
+                    "5. ผู้เข้าอบรมสามารถวิเคราะห์ข้อมูลชุมชนอย่างเป็นระบบ และจัดทำแนวทาง/แผนพัฒนาได้",
+                    "6. สื่อประกอบการบรรยายมีความชัดเจนและช่วยให้เข้าใจง่ายขึ้น",
+                    "7. ผู้เข้าอบรมได้รับความรู้ และทักษะเพิ่มเติมจากวิชานี้",
+                    "8. ผู้เข้าอบรมสามารถนำแนวคิดไปประยุกต์ใช้ในการทำงานจริงในพื้นที่ได้"
+                ]
+            }
+        ];
+
+        // ตัวแปรเก็บสถานะข้อมูลและกราฟ
+        let allRows = [];
+        let filteredRows = [];
+        let activeTab = "ALL";
+        let autoRefreshTimer = null;
+        let charts = {
+            gender: null,
+            age: null,
+            education: null,
+            status: null,
+            subjectsCompare: null
+        };
+
+        /**
+         * แปลผลระดับความพึงพอใจตามเกณฑ์มาตรฐาน 5 ระดับ
+         */
+        function interpretScore(mean) {
+            if (!mean || isNaN(mean) || mean <= 0) {
+                return { label: "ไม่มีข้อมูล", badgeClass: "bg-gray-100 text-gray-600" };
+            }
+            if (mean >= 4.51) {
+                return { label: "มากที่สุด", badgeClass: "bg-emerald-100 text-emeraldDeep border border-emerald-300" };
+            } else if (mean >= 3.51) {
+                return { label: "มาก", badgeClass: "bg-teal-100 text-teal-900 border border-teal-300" };
+            } else if (mean >= 2.51) {
+                return { label: "ปานกลาง", badgeClass: "bg-amber-100 text-amber-900 border border-amber-300" };
+            } else if (mean >= 1.51) {
+                return { label: "น้อย", badgeClass: "bg-orange-100 text-orange-900 border border-orange-300" };
+            } else {
+                return { label: "น้อยที่สุด", badgeClass: "bg-red-100 text-red-900 border border-red-300" };
+            }
+        }
+
+        /**
+         * คำนวณค่าทางสถิติ (จำนวน, ค่าเฉลี่ย, S.D., ร้อยละ, การแจกแจงความถี่ 5-1)
+         */
+        function computeStats(values) {
+            const valid = values.filter(v => !isNaN(v) && v >= 1 && v <= 5);
+            const n = valid.length;
+            const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+            if (n === 0) {
+                return { n: 0, mean: 0, sd: 0, pct: 0, counts };
+            }
+            let sum = 0;
+            valid.forEach(v => {
+                sum += v;
+                const rounded = Math.round(v);
+                if (counts[rounded] !== undefined) counts[rounded]++;
+            });
+            const mean = sum / n;
+            const variance = valid.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / n;
+            const sd = Math.sqrt(variance);
+            const pct = (mean / 5) * 100;
+            return { n, mean, sd, pct, counts };
+        }
+
+        /**
+         * ดึงค่าจากแถวข้อมูลโดยรองรับทั้งหัวคอลัมน์ภาษาไทยและภาษาอังกฤษ
+         */
+        function getRowField(row, keys) {
+            for (const k of keys) {
+                if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+                    return String(row[k]).trim();
+                }
+            }
+            return "";
+        }
+
+        /**
+         * แปลงแถว CSV ดิบให้เป็นออบเจกต์มาตรฐานที่พร้อมวิเคราะห์
+         */
+        function normalizeRow(raw) {
+            const timestamp = getRowField(raw, ["วันที่-เวลา", "timestamp", "Timestamp"]);
+            const day = getRowField(raw, ["วันที่อบรม", "day"]);
+            const gender = getRowField(raw, ["เพศ", "gender"]);
+            const age = getRowField(raw, ["อายุ", "age"]);
+            const education = getRowField(raw, ["วุฒิการศึกษา", "education"]);
+            const status = getRowField(raw, ["สถานะทางสังคม", "status"]);
+            const suggestions = getRowField(raw, ["ความคิดเห็นและข้อเสนอแนะ", "suggestions"]);
+
+            const scores = { S1: [], S2: [], S3: [] };
+            SUBJECTS_CONFIG.forEach(subj => {
+                for (let i = 1; i <= subj.questions.length; i++) {
+                    const valStr = getRowField(raw, [`${subj.prefix}${i}`, `${subj.altPrefix}${i}`]);
+                    const num = parseFloat(valStr);
+                    scores[subj.id].push(!isNaN(num) ? num : NaN);
+                }
+            });
+
+            return {
+                timestamp,
+                day,
+                gender,
+                age,
+                education,
+                status,
+                suggestions,
+                scores
+            };
+        }
+
+        /**
+         * ดึงข้อมูลสดจาก Google Sheets CSV พร้อม Cache-Busting
+         */
+        async function fetchSheetData(isManual = false) {
+            const refreshIcon = document.getElementById("refreshIcon");
+            const refreshBtn = document.getElementById("refreshBtn");
+            if (refreshIcon) refreshIcon.classList.add("animate-spin");
+            if (refreshBtn && isManual) refreshBtn.disabled = true;
+
+            // แสดงกล่องสถานะโหลดเฉพาะครั้งแรกที่ยังไม่มีข้อมูล
+            if (allRows.length === 0) {
+                showStateMessage("loading", "กำลังเชื่อมต่อและดึงข้อมูลจาก Google Sheets...", "โปรดรอสักครู่ ระบบกำลังประมวลผลข้อมูลแบบเรียลไทม์");
+            }
+
+            try {
+                const urlWithCacheBust = `${SHEET_CSV_URL}&t=${Date.now()}`;
+                const response = await fetch(urlWithCacheBust, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const csvText = await response.text();
+
+                const parsed = Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true
+                });
+
+                // กรองเฉพาะแถวที่มีข้อมูลจริง (ไม่ใช่แถวว่าง)
+                const cleaned = (parsed.data || [])
+                    .map(normalizeRow)
+                    .filter(r => r.gender || r.age || r.status || r.scores.S1.some(v => !isNaN(v)));
+
+                allRows = cleaned;
+
+                const nowStr = new Date().toLocaleTimeString("th-TH", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit"
+                });
+                document.getElementById("lastUpdatedText").innerHTML =
+                    `อัปเดตล่าสุดเมื่อเวลา <strong class="text-emeraldDeep font-display">${nowStr} น.</strong> (${allRows.length} รายการ)`;
+
+                if (allRows.length === 0) {
+                    showStateMessage(
+                        "empty",
+                        "ยังไม่มีข้อมูลการส่งแบบประเมินใน Google Sheets",
+                        "เมื่อผู้เข้าอบรมส่งแบบประเมินผ่านฟอร์ม ข้อมูลจะปรากฏบนแดชบอร์ดนี้โดยอัตโนมัติ"
+                    );
+                    document.getElementById("dashboardContent").classList.add("hidden");
+                } else {
+                    document.getElementById("stateMessageBox").classList.add("hidden");
+                    document.getElementById("dashboardContent").classList.remove("hidden");
+                    applyFilters();
+                }
+            } catch (err) {
+                console.error("Error fetching CSV:", err);
+                if (allRows.length === 0) {
+                    showStateMessage(
+                        "error",
+                        "ไม่สามารถดึงข้อมูลจาก Google Sheets ได้ในขณะนี้",
+                        "กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือการตั้งค่าเผยแพร่ไฟล์ชีตเป็น CSV แล้วกดปุ่มรีเฟรชข้อมูลทันที"
+                    );
+                    document.getElementById("dashboardContent").classList.add("hidden");
+                }
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove("animate-spin");
+                if (refreshBtn) refreshBtn.disabled = false;
+            }
+        }
+
+        /**
+         * แสดงข้อความสถานะ (กำลังโหลด / ว่าง / ข้อผิดพลาด)
+         */
+        function showStateMessage(type, title, desc) {
+            const box = document.getElementById("stateMessageBox");
+            const iconBox = document.getElementById("stateIcon");
+            document.getElementById("stateTitle").textContent = title;
+            document.getElementById("stateDesc").textContent = desc;
+
+            if (type === "loading") {
+                iconBox.className = "mx-auto w-14 h-14 rounded-2xl bg-emerald-50 text-emeraldRich flex items-center justify-center mb-3";
+                iconBox.innerHTML = `<svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>`;
+            } else if (type === "empty") {
+                iconBox.className = "mx-auto w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3";
+                iconBox.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+            } else {
+                iconBox.className = "mx-auto w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-3";
+                iconBox.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+            }
+            box.classList.remove("hidden");
+        }
+
+        /**
+         * กรองข้อมูลตามตัวกรองที่เลือก และอัปเดตทุกส่วนของแดชบอร์ด
+         */
+        function applyFilters() {
+            const fGender = document.getElementById("filterGender").value;
+            const fAge = document.getElementById("filterAge").value;
+            const fEdu = document.getElementById("filterEducation").value;
+            const fStatus = document.getElementById("filterStatus").value;
+
+            filteredRows = allRows.filter(row => {
+                if (fGender !== "ALL" && row.gender !== fGender) return false;
+                if (fAge !== "ALL" && row.age !== fAge) return false;
+                if (fEdu !== "ALL") {
+                    if (fEdu === "อื่น ๆ") {
+                        if (!row.education.startsWith("อื่น ๆ")) return false;
+                    } else if (row.education !== fEdu) {
+                        return false;
+                    }
+                }
+                if (fStatus !== "ALL" && row.status !== fStatus) return false;
+                return true;
+            });
+
+            // อัปเดตป้ายสรุปสถานะตัวกรอง
+            const badge = document.getElementById("filterSummaryBadge");
+            const isFiltered = fGender !== "ALL" || fAge !== "ALL" || fEdu !== "ALL" || fStatus !== "ALL";
+            if (isFiltered) {
+                badge.textContent = `กรองแล้ว: แสดง ${filteredRows.length} จาก ${allRows.length} คน`;
+                badge.className = "text-xs font-semibold text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full";
+            } else {
+                badge.textContent = `กำลังแสดงข้อมูลทั้งหมด (${allRows.length} คน)`;
+                badge.className = "text-xs font-medium text-emeraldRich bg-emerald-50 px-3 py-1 rounded-full";
+            }
+
+            updateKPIs();
+            updateDemographicCharts();
+            updateSubjectsAnalysis();
+            renderSuggestions();
+        }
+
+        /**
+         * ล้างตัวกรองทั้งหมดกลับเป็นค่าเริ่มต้น
+         */
+        function resetFilters() {
+            document.getElementById("filterGender").value = "ALL";
+            document.getElementById("filterAge").value = "ALL";
+            document.getElementById("filterEducation").value = "ALL";
+            document.getElementById("filterStatus").value = "ALL";
+            applyFilters();
+        }
+
+        /**
+         * อัปเดตการ์ด KPI ทั้ง 5 ใบ
+         */
+        function updateKPIs() {
+            const count = filteredRows.length;
+            document.getElementById("kpiTotalRespondents").textContent = count.toLocaleString("th-TH");
+            document.getElementById("kpiRespondentSub").textContent = `จากทั้งหมด ${allRows.length.toLocaleString("th-TH")} รายการในชีต`;
+
+            const subjectMeans = {};
+            let allScoresCombined = [];
+
+            SUBJECTS_CONFIG.forEach(subj => {
+                const flatScores = [];
+                filteredRows.forEach(r => {
+                    r.scores[subj.id].forEach(val => {
+                        if (!isNaN(val)) {
+                            flatScores.push(val);
+                            allScoresCombined.push(val);
+                        }
+                    });
+                });
+                const stats = computeStats(flatScores);
+                subjectMeans[subj.id] = stats;
+            });
+
+            const overallStats = computeStats(allScoresCombined);
+            const overallInterp = interpretScore(overallStats.mean);
+
+            document.getElementById("kpiOverallAvg").textContent = overallStats.mean.toFixed(2);
+            document.getElementById("kpiOverallPct").textContent = `ร้อยละ ${overallStats.pct.toFixed(2)}%`;
+            document.getElementById("kpiOverallLevel").textContent = overallInterp.label;
+
+            ["S1", "S2", "S3"].forEach(id => {
+                const st = subjectMeans[id];
+                const interp = interpretScore(st.mean);
+                document.getElementById(`kpi${id}Avg`).textContent = st.mean.toFixed(2);
+                document.getElementById(`kpi${id}Pct`).textContent = `ร้อยละ ${st.pct.toFixed(2)}%`;
+                document.getElementById(`kpi${id}Level`).textContent = interp.label;
+            });
+        }
+
+        /**
+         * สร้างหรืออัปเดตกราฟข้อมูลทั่วไป 4 กราฟ (ส่วนที่ 1)
+         */
+        function updateDemographicCharts() {
+            Chart.defaults.font.family = "'Sarabun', sans-serif";
+            Chart.defaults.color = "#374151";
+
+            // 1. เพศ
+            const genderCategories = ["ชาย", "หญิง"];
+            const genderCounts = genderCategories.map(g => filteredRows.filter(r => r.gender === g).length);
+            const totalG = genderCounts.reduce((a, b) => a + b, 0);
+            document.getElementById("genderCountNote").textContent =
+                totalG > 0 ? `ชาย ${genderCounts[0]} คน | หญิง ${genderCounts[1]} คน` : "";
+
+            if (charts.gender) charts.gender.destroy();
+            charts.gender = new Chart(document.getElementById("chartGender"), {
+                type: "doughnut",
+                data: {
+                    labels: ["ชาย", "หญิง"],
+                    datasets: [{
+                        data: genderCounts,
+                        backgroundColor: ["#1b4d3e", "#d4a338"],
+                        borderColor: "#ffffff",
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "62%",
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: { padding: 16, font: { size: 13, weight: "600" } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const val = ctx.parsed || 0;
+                                    const pct = totalG > 0 ? ((val / totalG) * 100).toFixed(1) : 0;
+                                    return ` ${ctx.label}: ${val} คน (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. ช่วงอายุ
+            const ageCategories = ["น้อยกว่า 30 ปี", "30-40 ปี", "41-50 ปี", "50 ปีขึ้นไป"];
+            const ageCounts = ageCategories.map(a => filteredRows.filter(r => r.age === a).length);
+
+            if (charts.age) charts.age.destroy();
+            charts.age = new Chart(document.getElementById("chartAge"), {
+                type: "bar",
+                data: {
+                    labels: ageCategories,
+                    datasets: [{
+                        label: "จำนวนผู้ตอบ (คน)",
+                        data: ageCounts,
+                        backgroundColor: ["#2a6f5b", "#1b4d3e", "#d4a338", "#0f3d30"],
+                        borderRadius: 8,
+                        maxBarThickness: 46
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const val = ctx.parsed.y || 0;
+                                    const pct = filteredRows.length > 0 ? ((val / filteredRows.length) * 100).toFixed(1) : 0;
+                                    return ` ${val} คน (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: "#e5e7eb" }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 3. วุฒิการศึกษา
+            const eduCategories = ["ต่ำกว่า ม.3", "ม.3 หรือเทียบเท่า", "ม.6 หรือเทียบเท่า", "ปริญญาตรี", "ปริญญาโท", "อื่น ๆ"];
+            const eduCounts = eduCategories.map(ed => {
+                if (ed === "อื่น ๆ") {
+                    return filteredRows.filter(r => r.education.startsWith("อื่น ๆ")).length;
+                }
+                return filteredRows.filter(r => r.education === ed).length;
+            });
+
+            if (charts.education) charts.education.destroy();
+            charts.education = new Chart(document.getElementById("chartEducation"), {
+                type: "bar",
+                data: {
+                    labels: eduCategories,
+                    datasets: [{
+                        label: "จำนวนผู้ตอบ (คน)",
+                        data: eduCounts,
+                        backgroundColor: "#1b4d3e",
+                        hoverBackgroundColor: "#d4a338",
+                        borderRadius: 6,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const val = ctx.parsed.x || 0;
+                                    const pct = filteredRows.length > 0 ? ((val / filteredRows.length) * 100).toFixed(1) : 0;
+                                    return ` ${val} คน (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: "#e5e7eb" }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 4. สถานะทางสังคม
+            const statusCategories = [
+                "กำนัน ผู้ใหญ่บ้าน",
+                "ผู้นำชุมชน/ท้องถิ่น (อปท.)",
+                "ผู้แทน ศอช.ต.",
+                "เจ้าหน้าที่ของกรมการพัฒนาชุมชน"
+            ];
+            const statusShortLabels = [
+                "กำนัน ผู้ใหญ่บ้าน",
+                "ผู้นำชุมชน/ท้องถิ่น (อปท.)",
+                "ผู้แทน ศอช.ต.",
+                "เจ้าหน้าที่ กรมการพัฒนาชุมชน"
+            ];
+            const statusCounts = statusCategories.map(st => filteredRows.filter(r => r.status === st).length);
+
+            if (charts.status) charts.status.destroy();
+            charts.status = new Chart(document.getElementById("chartStatus"), {
+                type: "bar",
+                data: {
+                    labels: statusShortLabels,
+                    datasets: [{
+                        label: "จำนวนผู้ตอบ (คน)",
+                        data: statusCounts,
+                        backgroundColor: ["#0f3d30", "#2a6f5b", "#d4a338", "#0d9488"],
+                        borderRadius: 6,
+                        barThickness: 24
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const val = ctx.parsed.x || 0;
+                                    const pct = filteredRows.length > 0 ? ((val / filteredRows.length) * 100).toFixed(1) : 0;
+                                    return ` ${val} คน (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: "#e5e7eb" }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * สลับแท็บแสดงรายวิชา
+         */
+        function switchSubjectTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll(".subject-tab").forEach(btn => {
+                btn.className = "subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-medium bg-stone-100 text-gray-700 hover:bg-emerald-50 transition-all cursor-pointer";
+            });
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) {
+                activeBtn.className = "subject-tab px-4 py-2 rounded-xl font-display text-xs sm:text-sm font-semibold bg-emeraldRich text-white shadow-2xs transition-all cursor-pointer";
+            }
+            renderSubjectTables();
+        }
+
+        /**
+         * อัปเดตกราฟเปรียบเทียบ 3 วิชา และตารางสรุปรายข้อ
+         */
+        function updateSubjectsAnalysis() {
+            const compareLabels = SUBJECTS_CONFIG.map(s => s.shortTitle);
+            const compareMeans = SUBJECTS_CONFIG.map(subj => {
+                const flat = [];
+                filteredRows.forEach(r => r.scores[subj.id].forEach(v => { if (!isNaN(v)) flat.push(v); }));
+                return Number(computeStats(flat).mean.toFixed(2));
+            });
+
+            // ปลั๊กอินวาดเส้นเกณฑ์ 4.51 (มากที่สุด) บนกราฟ
+            const thresholdLinePlugin = {
+                id: "thresholdLine",
+                afterDatasetsDraw(chart) {
+                    const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+                    const yPos = y.getPixelForValue(4.51);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([6, 4]);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "#d4a338";
+                    ctx.moveTo(left, yPos);
+                    ctx.lineTo(right, yPos);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            };
+
+            if (charts.subjectsCompare) charts.subjectsCompare.destroy();
+            charts.subjectsCompare = new Chart(document.getElementById("chartSubjectsCompare"), {
+                type: "bar",
+                data: {
+                    labels: compareLabels,
+                    datasets: [{
+                        label: "คะแนนเฉลี่ย (เต็ม 5.00)",
+                        data: compareMeans,
+                        backgroundColor: ["#1b4d3e", "#2a6f5b", "#0f766e"],
+                        borderColor: "#d4a338",
+                        borderWidth: { top: 3, left: 0, right: 0, bottom: 0 },
+                        borderRadius: 10,
+                        maxBarThickness: 72
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const val = ctx.parsed.y || 0;
+                                    const pct = ((val / 5) * 100).toFixed(2);
+                                    const level = interpretScore(val).label;
+                                    return ` เฉลี่ย ${val.toFixed(2)} คะแนน (ร้อยละ ${pct}% | ระดับ${level})`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 5,
+                            ticks: { stepSize: 1 },
+                            grid: { color: "#e5e7eb" }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 13, weight: "600" } }
+                        }
+                    }
+                },
+                plugins: [thresholdLinePlugin]
+            });
+
+            renderSubjectTables();
+        }
+
+        /**
+         * สร้างตารางวิเคราะห์รายข้อของแต่ละวิชา
+         */
+        function renderSubjectTables() {
+            const container = document.getElementById("subjectTablesContainer");
+            container.innerHTML = "";
+
+            const subjectsToShow = activeTab === "ALL"
+                ? SUBJECTS_CONFIG
+                : SUBJECTS_CONFIG.filter(s => s.id === activeTab);
+
+            subjectsToShow.forEach(subj => {
+                let subjectAllValues = [];
+                let rowsHtml = "";
+
+                subj.questions.forEach((qText, idx) => {
+                    const itemValues = filteredRows
+                        .map(r => r.scores[subj.id][idx])
+                        .filter(v => !isNaN(v));
+
+                    itemValues.forEach(v => subjectAllValues.push(v));
+                    const st = computeStats(itemValues);
+                    const interp = interpretScore(st.mean);
+
+                    rowsHtml += `
+                        <tr class="even:bg-stone-50/70 hover:bg-emerald-50/40 transition-colors">
+                            <td class="py-3 px-4 text-gray-800 leading-relaxed border-r border-gray-200">
+                                ${qText}
+                            </td>
+                            <td class="py-3 px-2 text-center font-medium text-emeraldDeep border-r border-gray-200">${st.counts[5]}</td>
+                            <td class="py-3 px-2 text-center font-medium text-gray-700 border-r border-gray-200">${st.counts[4]}</td>
+                            <td class="py-3 px-2 text-center font-medium text-gray-700 border-r border-gray-200">${st.counts[3]}</td>
+                            <td class="py-3 px-2 text-center font-medium text-gray-700 border-r border-gray-200">${st.counts[2]}</td>
+                            <td class="py-3 px-2 text-center font-medium text-gray-700 border-r border-gray-200">${st.counts[1]}</td>
+                            <td class="py-3 px-3 text-center font-display font-bold text-emeraldRich border-r border-gray-200">
+                                ${st.mean.toFixed(2)}
+                            </td>
+                            <td class="py-3 px-2.5 text-center text-gray-600 border-r border-gray-200">
+                                ${st.sd.toFixed(2)}
+                            </td>
+                            <td class="py-3 px-3 border-r border-gray-200 min-w-[110px]">
+                                <div class="text-xs font-semibold text-gray-700 text-right mb-1">${st.pct.toFixed(1)}%</div>
+                                <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-emeraldRich to-goldAccent rounded-full" style="width: ${Math.min(100, st.pct)}%;"></div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3 text-center whitespace-nowrap">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-display font-semibold ${interp.badgeClass}">
+                                    ${interp.label}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                const subjTotalStats = computeStats(subjectAllValues);
+                const subjInterp = interpretScore(subjTotalStats.mean);
+
+                const block = document.createElement("div");
+                block.className = "rounded-2xl border border-gray-200 overflow-hidden shadow-2xs";
+                block.innerHTML = `
+                    <div class="bg-gradient-to-r from-emerald-50 via-stone-50 to-amber-50/40 px-5 py-3.5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+                        <h4 class="font-display font-bold text-emeraldDeep text-base sm:text-lg">
+                            ${subj.fullTitle}
+                        </h4>
+                        <div class="flex items-center gap-2 text-xs sm:text-sm">
+                            <span class="text-gray-600">คะแนนเฉลี่ยรวมวิชา:</span>
+                            <span class="font-display font-bold text-emeraldRich text-base">${subjTotalStats.mean.toFixed(2)}</span>
+                            <span class="text-gray-500">(${subjTotalStats.pct.toFixed(2)}%)</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-display font-semibold ${subjInterp.badgeClass}">
+                                ${subjInterp.label}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse min-w-[880px] text-sm">
+                            <thead>
+                                <tr class="bg-emeraldDeep text-white font-display text-xs">
+                                    <th class="py-3 px-4 text-left font-semibold w-[40%] border-r border-white/15">ประเด็นการประเมิน</th>
+                                    <th class="py-2.5 px-2 text-center font-semibold w-[5%] border-r border-white/15">ระดับ 5<br><span class="text-amber-300 font-normal">(คน)</span></th>
+                                    <th class="py-2.5 px-2 text-center font-semibold w-[5%] border-r border-white/15">ระดับ 4<br><span class="text-amber-300 font-normal">(คน)</span></th>
+                                    <th class="py-2.5 px-2 text-center font-semibold w-[5%] border-r border-white/15">ระดับ 3<br><span class="text-amber-300 font-normal">(คน)</span></th>
+                                    <th class="py-2.5 px-2 text-center font-semibold w-[5%] border-r border-white/15">ระดับ 2<br><span class="text-amber-300 font-normal">(คน)</span></th>
+                                    <th class="py-2.5 px-2 text-center font-semibold w-[5%] border-r border-white/15">ระดับ 1<br><span class="text-amber-300 font-normal">(คน)</span></th>
+                                    <th class="py-2.5 px-3 text-center font-semibold w-[7%] border-r border-white/15">ค่าเฉลี่ย<br><span class="text-amber-300 font-normal">(x̄)</span></th>
+                                    <th class="py-2.5 px-2.5 text-center font-semibold w-[6%] border-r border-white/15">S.D.</th>
+                                    <th class="py-2.5 px-3 text-center font-semibold w-[12%] border-r border-white/15">ร้อยละ</th>
+                                    <th class="py-2.5 px-3 text-center font-semibold w-[10%]">ระดับความพึงพอใจ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${rowsHtml}
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-emerald-50/90 font-display font-bold text-emeraldDeep border-t-2 border-emeraldRich/30">
+                                    <td colspan="6" class="py-3 px-4 text-right border-r border-gray-200">
+                                        สรุปภาพรวม ${subj.shortTitle}
+                                    </td>
+                                    <td class="py-3 px-3 text-center text-emeraldRich text-base border-r border-gray-200">
+                                        ${subjTotalStats.mean.toFixed(2)}
+                                    </td>
+                                    <td class="py-3 px-2.5 text-center text-gray-700 border-r border-gray-200">
+                                        ${subjTotalStats.sd.toFixed(2)}
+                                    </td>
+                                    <td class="py-3 px-3 text-center text-emeraldDeep border-r border-gray-200">
+                                        ${subjTotalStats.pct.toFixed(2)}%
+                                    </td>
+                                    <td class="py-3 px-3 text-center">
+                                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs ${subjInterp.badgeClass}">
+                                            ${subjInterp.label}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+                container.appendChild(block);
+            });
+        }
+
+        /**
+         * แสดงรายการความคิดเห็นและข้อเสนอแนะเพิ่มเติม (ส่วนที่ 3)
+         */
+        function renderSuggestions() {
+            const container = document.getElementById("suggestionsContainer");
+            const searchKeyword = (document.getElementById("suggestionSearchInput").value || "").trim().toLowerCase();
+
+            // กรองเฉพาะแถวที่มีข้อความข้อเสนอแนะจริง (ตัด "-" หรือช่องว่างออก)
+            const validSuggestions = filteredRows.filter(r => {
+                const text = (r.suggestions || "").trim();
+                if (!text || text === "-" || text === "ไม่มี" || text === "ไม่มีข้อเสนอแนะ") return false;
+                if (searchKeyword && !text.toLowerCase().includes(searchKeyword) && !r.status.toLowerCase().includes(searchKeyword)) {
+                    return false;
+                }
+                return true;
+            });
+
+            document.getElementById("suggestionCountBadge").textContent = `${validSuggestions.length} ข้อความ`;
+
+            if (validSuggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-stone-50 border border-dashed border-gray-300 rounded-2xl p-8 text-center text-gray-500 text-sm">
+                        ยังไม่มีข้อความข้อเสนอแนะเพิ่มเติมที่ตรงกับเงื่อนไขการค้นหา
+                    </div>
+                `;
+                return;
+            }
+
+            // แสดงรายการล่าสุดขึ้นก่อน
+            const reversed = [...validSuggestions].reverse();
+            container.innerHTML = reversed.map((item, index) => {
+                const safeText = escapeHtml(item.suggestions);
+                const safeStatus = escapeHtml(item.status || "ผู้เข้าอบรม");
+                const safeMeta = [item.gender ? `เพศ${item.gender}` : "", item.age || ""].filter(Boolean).join(" • ");
+                const safeTime = escapeHtml(item.timestamp || "");
+
+                return `
+                    <article class="bg-stone-50/80 hover:bg-emerald-50/40 rounded-2xl p-4 sm:p-5 border border-gray-200/90 transition-all flex flex-col justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emeraldRich/10 text-emeraldRich font-display font-bold text-xs shrink-0 mt-0.5">
+                                #${reversed.length - index}
+                            </span>
+                            <p class="text-gray-800 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                                “${safeText}”
+                            </p>
+                        </div>
+                        <div class="pt-2.5 border-t border-gray-200/70 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                            <span class="inline-flex items-center gap-1.5 font-medium text-emeraldDeep bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
+                                ${safeStatus}
+                            </span>
+                            <span>${safeMeta}${safeTime ? ` • ${safeTime}` : ""}</span>
+                        </div>
+                    </article>
+                `;
+            }).join("");
+        }
+
+        /**
+         * ป้องกัน XSS เมื่อแสดงข้อความจากผู้ใช้
+         */
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        /**
+         * ตั้งค่าระบบรีเฟรชอัตโนมัติทุก 30 วินาที
+         */
+        function setupAutoRefresh() {
+            const toggle = document.getElementById("autoRefreshToggle");
+            function startTimer() {
+                if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+                autoRefreshTimer = setInterval(() => {
+                    if (toggle.checked) {
+                        fetchSheetData(false);
+                    }
+                }, 30000);
+            }
+            toggle.addEventListener("change", () => {
+                if (toggle.checked) {
+                    fetchSheetData(false);
+                    startTimer();
+                } else if (autoRefreshTimer) {
+                    clearInterval(autoRefreshTimer);
+                }
+            });
+            startTimer();
+        }
+
+        // เริ่มทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        window.addEventListener("DOMContentLoaded", () => {
+            fetchSheetData(false);
+            setupAutoRefresh();
+        });
+    </script>
+</body>
+</html>
